@@ -275,38 +275,82 @@
                     <!-- ส่วนแสดงข้อมูลวงเงินลงทุนสำหรับ Master และ Admin -->
                     <div class="bg-gradient-to-r from-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
                         <div>
-                            <span class="text-xs uppercase tracking-wider text-indigo-300 font-bold block" id="investment-role-indicator">วงเงินลงทุนบริษัท (Investment Capital)</span>
+                            <span class="text-xs uppercase tracking-wider text-indigo-300 font-bold block" id="investment-role-indicator">เงินทุนตั้งต้นของบริษัท</span>
                             <h3 class="text-3xl font-extrabold mt-1" id="display-investment-limit">500,000 ฿</h3>
-                            <p class="text-xs text-gray-300 mt-1" id="investment-permission-desc">Master เป็นผู้กำหนดวงเงินลงทุน | Admin ใช้ตรวจสอบเพื่อตัดสินใจอนุมัติปล่อยสินเชื่อ</p>
+                            <p class="text-xs text-gray-300 mt-1" id="investment-permission-desc">Master กำหนดเงินทุนตั้งต้น • ระบบหักทุนที่ยังค้างอยู่กับลูกค้าให้อัตโนมัติ</p>
                         </div>
                         <div id="master-investment-control" class="hidden flex items-center gap-2">
-                            <input type="number" id="input-master-investment" placeholder="ระบุวงเงินใหม่" class="p-2 rounded-lg text-slate-900 font-bold text-sm outline-none w-40">
-                            <button onclick="updateMasterInvestmentLimit()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2 rounded-lg text-sm shadow">ตั้งค่าวงเงิน</button>
+                            <input type="number" id="input-master-investment" placeholder="ระบุเงินทุนตั้งต้น" class="p-2 rounded-lg text-slate-900 font-bold text-sm outline-none w-40">
+                            <button onclick="updateMasterInvestmentLimit()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2 rounded-lg text-sm shadow">ตั้งเงินทุน</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 -mt-2">
+                        <div class="bg-white border rounded-xl p-4 shadow-sm">
+                            <div class="text-xs text-gray-500 font-bold">เงินต้นที่ยังค้างอยู่กับลูกค้า</div>
+                            <div id="dash-capital-deployed" class="text-xl font-extrabold text-rose-600">0 ฿</div>
+                            <div class="text-[10px] text-gray-400">คิดจากเงินต้นของงวดที่ยังชำระไม่ครบ</div>
+                        </div>
+                        <div class="bg-white border rounded-xl p-4 shadow-sm">
+                            <div class="text-xs text-gray-500 font-bold">ทุนคงเหลือพร้อมปล่อย</div>
+                            <div id="dash-capital-available" class="text-xl font-extrabold text-emerald-600">0 ฿</div>
+                            <div class="text-[10px] text-gray-400">เงินทุนตั้งต้น − เงินต้นที่ยังค้าง</div>
+                        </div>
+                        <div class="bg-white border rounded-xl p-4 shadow-sm">
+                            <div class="text-xs text-gray-500 font-bold">ยอดปล่อยสินเชื่อสะสม</div>
+                            <div id="dash-capital-disbursed" class="text-xl font-extrabold text-indigo-600">0 ฿</div>
+                            <div class="text-[10px] text-gray-400">เงินต้นที่โอนให้ลูกค้าสำเร็จทั้งหมด</div>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="bg-white p-4 rounded-xl shadow border">
-                            <span class="text-xs text-gray-500 font-bold">ยอดที่ต้องเก็บวันนี้ทั้งหมด</span>
-                            <p class="text-2xl font-bold text-slate-800" id="dash-target-total">0 ฿</p>
+                            <span class="text-xs text-gray-500 font-bold">เป้ายอดเก็บวันนี้ทั้งหมด</span>
+                            <p class="text-2xl font-bold text-slate-800" id="dash-target-total">0 ฿</p><p id="dash-target-note" class="text-[10px] text-gray-400 mt-1">ตามตารางงวดวันนี้ + ยอดค้างก่อนหน้า</p>
                         </div>
                         <div class="bg-white p-4 rounded-xl shadow border">
-                            <span class="text-xs text-gray-500 font-bold">ยอดที่เก็บได้จริงวันนี้</span>
+                            <span class="text-xs text-gray-500 font-bold">รายรับที่เก็บได้จริงวันนี้</span>
                             <p class="text-2xl font-bold text-emerald-600" id="dash-actual-total">0 ฿</p>
                         </div>
                         <div class="bg-white p-4 rounded-xl shadow border">
-                            <span class="text-xs text-gray-500 font-bold">ยอดโอน QR / เงินสดค้าง</span>
-                            <p class="text-lg font-bold text-blue-600" id="dash-qr-total">QR: 0 ฿</p>
-                            <p class="text-lg font-bold text-amber-600" id="dash-cash-total">เงินสด: 0 ฿</p>
+                            <span class="text-xs text-gray-500 font-bold">รายรับจริงวันนี้ แยกช่องทาง</span>
+                            <p class="text-lg font-bold text-blue-600" id="dash-qr-total">SCAN: 0 ฿</p>
+                            <p class="text-lg font-bold text-amber-600" id="dash-cash-total">CASH: 0 ฿</p>
                         </div>
                         <div class="bg-white p-4 rounded-xl shadow border">
-                            <span class="text-xs text-gray-500 font-bold">รายรับสุทธิบริษัท (หักคอมฯ ไรเดอร์ 7%)</span>
+                            <span class="text-xs text-gray-500 font-bold">ยังขาดจากเป้าวันนี้</span>
                             <p class="text-2xl font-bold text-indigo-600" id="dash-net-total">0 ฿</p>
+                            <p id="dash-progress-note" class="text-[10px] text-gray-400 mt-1">ความคืบหน้า 0%</p>
+                            <p id="dash-capital-days" class="text-[10px] text-emerald-700 font-bold mt-1">คาดคืนทุน: —</p>
+                        </div>
+                    </div>
+
+                    <div id="checkpoint4g-channel-card" class="bg-white rounded-xl shadow border border-indigo-100 overflow-hidden">
+                        <div class="p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <div class="font-bold text-indigo-800">คำขอเปลี่ยนช่องทางชำระ SCAN ↔ CASH</div>
+                                <div class="text-xs text-gray-500">ลูกค้ากดขอเปลี่ยนแล้วต้องให้ Admin/Master อนุมัติก่อน • CASH ที่อนุมัติแล้วจะสร้างงานเก็บเงินให้ระบบ Rider</div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span id="checkpoint4g-channel-count" class="bg-red-600 text-white rounded-full px-2 py-1 text-xs font-bold">0 รออนุมัติ</span>
+                                <button onclick="checkpoint4gLoadChannelRequests(true)" class="text-xs font-bold text-indigo-600">↻ รีเฟรช</button>
+                            </div>
+                        </div>
+                        <div id="checkpoint4g-channel-list" class="p-4 space-y-2">
+                            <div class="text-sm text-gray-400">กำลังโหลด...</div>
                         </div>
                     </div>
 
                     <div class="bg-white rounded-xl shadow overflow-hidden">
-                        <div class="p-4 border-b font-bold text-gray-700">ติดตามสถานะการทำงานของ Rider & ค่าคอมมิชชั่นสะสม (7%)</div>
+                        <div class="p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <div class="font-bold text-gray-700">ติดตามสถานะการทำงานของ Rider & ค่าคอมมิชชั่นสะสม (7%)</div>
+                                <div id="admin-rider-last-refresh" class="text-[10px] text-gray-400 mt-1">กำลังโหลดสถานะ...</div>
+                            </div>
+                            <button onclick="checkpoint4gRefreshRiderMonitor(true)" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-lg text-xs font-bold">
+                                ↻ รีเฟรชสถานะ Rider
+                            </button>
+                        </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left text-sm">
                                 <thead class="bg-gray-50 border-b">
@@ -2464,6 +2508,222 @@ window.addEventListener("load",()=>setTimeout(bootAdminSession,900));
   </div>
 </div>
 
+
+<script>
+/* ============================================================
+   CHECKPOINT 4G — FINANCE DASHBOARD + CHANNEL APPROVAL + RIDER REFRESH
+   ============================================================ */
+let checkpoint4gFinance=null;
+let checkpoint4gChannelRequests=[];
+let checkpoint4gChannelToastShown=false;
+let checkpoint4gRiderTimer=null;
+
+async function checkpoint4gLoadFinance(showMessage=false){
+  if(!currentUser||!["admin","master"].includes(String(currentUser.role)))return null;
+  try{
+    const {data,error}=await adminSb.rpc("fdg_admin_finance_dashboard_snapshot");
+    if(error)throw error;
+    checkpoint4gFinance=data||{};
+
+    const capital=Number(data?.investment_capital_total||0);
+    const deployed=Number(data?.principal_currently_deployed||0);
+    const available=Number(data?.available_capital||0);
+    const disbursed=Number(data?.cumulative_disbursed_principal||0);
+    const target=Number(data?.collection_target_today||0);
+    const actual=Number(data?.actual_received_today||0);
+    const shortfall=Number(data?.shortfall_today||0);
+    const scan=Number(data?.scan_received_today||0);
+    const cash=Number(data?.cash_received_today||0);
+    const progress=Number(data?.target_progress_pct||0);
+    const overdue=Number(data?.overdue_carry||0);
+    const days=data?.estimated_principal_recovery_days;
+
+    const set=(id,text)=>{const el=document.getElementById(id);if(el)el.textContent=text;};
+
+    set("display-investment-limit",liveMoney(capital));
+    set("loan-available-capital-badge",liveMoney(available));
+    set("dash-capital-deployed",liveMoney(deployed));
+    set("dash-capital-available",liveMoney(available));
+    set("dash-capital-disbursed",liveMoney(disbursed));
+
+    set("dash-target-total",liveMoney(target));
+    set("dash-actual-total",liveMoney(actual));
+    set("dash-qr-total","SCAN: "+liveMoney(scan));
+    set("dash-cash-total","CASH: "+liveMoney(cash));
+    set("dash-net-total",liveMoney(shortfall));
+    set("dash-progress-note",`ความคืบหน้า ${progress.toFixed(1)}%`);
+    set("dash-target-note",
+      overdue>0
+        ? `รวมยอดค้างก่อนหน้า ${liveMoney(overdue)}`
+        : "ตามตารางงวดที่ต้องชำระวันนี้"
+    );
+    set("dash-capital-days",
+      Number.isFinite(Number(days)) && Number(days)>0
+        ? `คาดคืนเงินต้นที่ค้าง ≈ ${Number(days)} วัน หากเก็บได้ตามตาราง`
+        : "คาดคืนทุน: ยังไม่มีข้อมูลตารางเพียงพอ"
+    );
+
+    if(showMessage)showToast("รีเฟรชแดชบอร์ดการเงินแล้ว",true);
+    return data;
+  }catch(err){
+    console.error("Finance dashboard:",err);
+    if(showMessage)showToast(err?.message||"โหลดข้อมูลการเงินไม่สำเร็จ",false);
+    return null;
+  }
+}
+
+window.updateMasterInvestmentLimit=async function(){
+  if(!isMaster){
+    showToast("เฉพาะ Master เท่านั้นที่ตั้งเงินทุนบริษัทได้",false);return;
+  }
+
+  const input=document.getElementById("input-master-investment");
+  const amount=Number(input?.value||0);
+  if(!Number.isFinite(amount)||amount<=0){
+    showToast("กรอกจำนวนเงินทุนตั้งต้นให้ถูกต้อง",false);return;
+  }
+  if(!confirm(`ยืนยันตั้งเงินทุนบริษัทเป็น ${liveMoney(amount)} ?`))return;
+
+  try{
+    const {data,error}=await adminSb.rpc("fdg_master_set_investment_capital",{p_amount:amount});
+    if(error)throw error;
+    if(input)input.value="";
+    showToast(`ตั้งเงินทุนบริษัทเป็น ${liveMoney(data?.investment_capital_total||amount)} สำเร็จ`,true);
+    await checkpoint4gLoadFinance(false);
+  }catch(err){
+    showToast(err?.message||"ตั้งเงินทุนไม่สำเร็จ",false);
+  }
+};
+
+function checkpoint4gRenderChannelRequests(){
+  const box=document.getElementById("checkpoint4g-channel-list");
+  const badge=document.getElementById("checkpoint4g-channel-count");
+  if(!box)return;
+
+  if(badge)badge.textContent=`${checkpoint4gChannelRequests.length} รออนุมัติ`;
+
+  if(!checkpoint4gChannelRequests.length){
+    box.innerHTML='<div class="text-sm text-emerald-600 font-bold">ไม่มีคำขอเปลี่ยนช่องทางที่รออนุมัติ</div>';
+    return;
+  }
+
+  box.innerHTML=checkpoint4gChannelRequests.map(r=>`
+    <div class="border rounded-xl p-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div>
+        <div class="font-bold text-slate-800">
+          ${liveEsc(r.customer_name||"-")}
+          <span class="text-indigo-600">${liveEsc(r.customer_code||"")}</span>
+        </div>
+        <div class="text-xs text-gray-500">
+          ${liveEsc(r.loan_code||"-")} •
+          <b>${liveEsc(r.current_channel||"-")}</b>
+          <span class="mx-1">→</span>
+          <b class="${r.requested_channel==="CASH"?"text-amber-600":"text-blue-600"}">${liveEsc(r.requested_channel||"-")}</b>
+        </div>
+        <div class="text-[11px] text-gray-400 mt-1">${liveEsc(r.reason||"ลูกค้าร้องขอผ่านหน้าเว็บไซต์")}</div>
+      </div>
+      <div class="flex gap-2 shrink-0">
+        <button onclick="checkpoint4gReviewChannel('${r.id}',true)" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold">อนุมัติ</button>
+        <button onclick="checkpoint4gReviewChannel('${r.id}',false)" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-xs font-bold">ปฏิเสธ</button>
+      </div>
+    </div>`).join("");
+}
+
+async function checkpoint4gLoadChannelRequests(showMessage=false){
+  if(!currentUser||!["admin","master"].includes(String(currentUser.role)))return;
+  try{
+    const {data,error}=await adminSb.rpc("fdg_payment_channel_admin_snapshot");
+    if(error)throw error;
+    checkpoint4gChannelRequests=data?.requests||[];
+    checkpoint4gRenderChannelRequests();
+
+    if(checkpoint4gChannelRequests.length && !checkpoint4gChannelToastShown){
+      checkpoint4gChannelToastShown=true;
+      showToast(`มีคำขอเปลี่ยนช่องทางชำระ ${checkpoint4gChannelRequests.length} รายการ`,true);
+    }
+    if(showMessage)showToast("รีเฟรชคำขอเปลี่ยนช่องทางแล้ว",true);
+  }catch(err){
+    console.error("Channel requests:",err);
+    if(showMessage)showToast(err?.message||"โหลดคำขอเปลี่ยนช่องทางไม่สำเร็จ",false);
+  }
+}
+
+window.checkpoint4gReviewChannel=async function(requestId,approve){
+  const item=checkpoint4gChannelRequests.find(x=>String(x.id)===String(requestId));
+  if(!item)return;
+
+  const action=approve?"อนุมัติ":"ปฏิเสธ";
+  if(!confirm(`${action} ${item.current_channel} → ${item.requested_channel}\nลูกค้า ${item.customer_name||item.customer_code||"-"} ?`))return;
+
+  try{
+    const {data,error}=await adminSb.rpc("fdg_review_payment_channel_request",{
+      p_request_id:requestId,
+      p_approve:approve,
+      p_note:approve?"อนุมัติผ่านหลังบ้าน":"ปฏิเสธผ่านหลังบ้าน"
+    });
+    if(error)throw error;
+
+    showToast(
+      approve
+        ? `อนุมัติเป็น ${data?.payment_channel||item.requested_channel} แล้ว`
+        : "ปฏิเสธคำขอแล้ว",
+      true
+    );
+
+    await Promise.all([
+      checkpoint4gLoadChannelRequests(false),
+      checkpoint4RefreshManagement(false),
+      checkpoint4gLoadFinance(false),
+      loadLiveRiderMonitorData()
+    ]);
+  }catch(err){
+    const msg=String(err?.message||"");
+    if(msg.includes("SCAN_PAYMENT_VERIFYING")){
+      showToast("ลูกค้ามี SCAN ที่กำลังตรวจสลิปอยู่ จึงยังเปลี่ยนเป็น CASH ไม่ได้",false);
+    }else if(msg.includes("CASH_NOT_SETTLED")){
+      showToast("Rider ยังมีเงินสดของลูกค้ารายนี้ค้างส่งบริษัท จึงยังเปลี่ยนกลับเป็น SCAN ไม่ได้",false);
+    }else{
+      showToast(msg||"อนุมัติคำขอไม่สำเร็จ",false);
+    }
+  }
+};
+
+window.checkpoint4gRefreshRiderMonitor=async function(showMessage=false){
+  try{
+    await loadLiveRiderMonitorData();
+    const el=document.getElementById("admin-rider-last-refresh");
+    if(el)el.textContent=`อัปเดตล่าสุด ${new Date().toLocaleTimeString("th-TH")} • รีเฟรชอัตโนมัติทุก 15 วินาที`;
+    if(showMessage)showToast("อัปเดตสถานะ Rider แล้ว",true);
+  }catch(err){
+    if(showMessage)showToast(err?.message||"รีเฟรช Rider ไม่สำเร็จ",false);
+  }
+};
+
+function checkpoint4gStartAdminRealtime(){
+  if(checkpoint4gRiderTimer)clearInterval(checkpoint4gRiderTimer);
+  checkpoint4gRiderTimer=setInterval(()=>{
+    if(currentUser && ["admin","master"].includes(String(currentUser.role))){
+      checkpoint4gRefreshRiderMonitor(false);
+      checkpoint4gLoadFinance(false);
+      checkpoint4gLoadChannelRequests(false);
+    }
+  },15000);
+}
+
+// Extend live admin loading without replacing existing core logic.
+const checkpoint4gBaseLoadLiveAdminData=loadLiveAdminData;
+loadLiveAdminData=async function(){
+  await checkpoint4gBaseLoadLiveAdminData();
+  await Promise.all([
+    checkpoint4gLoadFinance(false),
+    checkpoint4gLoadChannelRequests(false)
+  ]);
+  checkpoint4gStartAdminRealtime();
+  const el=document.getElementById("admin-rider-last-refresh");
+  if(el)el.textContent=`อัปเดตล่าสุด ${new Date().toLocaleTimeString("th-TH")} • รีเฟรชอัตโนมัติทุก 15 วินาที`;
+};
+</script>
+
 <script>
 /* ============================================================
    CHECKPOINT 4 — LIVE STAFF / RIDER MANAGEMENT
@@ -4447,12 +4707,8 @@ function renderLiveRiderMonitor(){
     totalOutstanding+=Number(w.remaining_company_money||0);
   });
 
-  const actual=document.getElementById("dash-actual-total");
-  if(actual)actual.innerText=liveMoney(collectedToday);
-  const qr=document.getElementById("dash-qr-total");
-  if(qr)qr.innerText="นำส่งบริษัท: "+liveMoney(returnedToday);
-  const cash=document.getElementById("dash-cash-total");
-  if(cash)cash.innerText="คงค้าง Rider: "+liveMoney(totalOutstanding);
+  // Dashboard income cards are authoritative from fdg_admin_finance_dashboard_snapshot().
+  // Rider monitor must not overwrite them with work-session/remittance values.
 
   body.innerHTML=liveRiders.map(r=>{
     const sessions=liveAdminWorkSessions.filter(w=>String(w.rider_id)===String(r.id));
