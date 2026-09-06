@@ -166,9 +166,14 @@
                     </div>
                 </div>
             </div>
-            <button onclick="logout()" class="p-2 bg-emerald-700 hover:bg-emerald-800 rounded-lg text-xs font-bold flex items-center gap-1">
-                <i data-lucide="log-out" class="w-3 h-3"></i> ออก
-            </button>
+            <div class="flex items-center gap-2">
+                <button onclick="rider5RefreshNow()" class="p-2 bg-emerald-500 hover:bg-emerald-700 rounded-lg text-xs font-bold flex items-center gap-1">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> รีเฟรช
+                </button>
+                <button onclick="logout()" class="p-2 bg-emerald-700 hover:bg-emerald-800 rounded-lg text-xs font-bold flex items-center gap-1">
+                    <i data-lucide="log-out" class="w-3 h-3"></i> ออก
+                </button>
+            </div>
         </header>
 
         <div class="p-4 max-w-lg mx-auto space-y-4">
@@ -176,6 +181,7 @@
                 <div>
                     <span class="text-xs text-gray-500">สถานะกะทำงาน (เงื่อนไขเลิกงาน: ต้องไม่มีงานค้างที่ยังไม่ได้เก็บเงิน)</span>
                     <p id="rider-shift-status" class="font-bold text-red-500 text-sm">ยังไม่เริ่มงาน</p>
+                    <p id="rider-live-refresh-state" class="text-[10px] text-gray-400 mt-1">กำลังโหลดงาน...</p>
                 </div>
                 <button id="btn-toggle-shift" onclick="toggleShift()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow">
                     กดเริ่มงาน
@@ -458,6 +464,17 @@
                             <span class="text-xs text-rose-600 font-bold block">ยอดหนี้สูญรวมทั้งหมด:</span>
                             <span class="text-xl font-extrabold text-rose-700" id="total-uncollectible-badge">0 ฿</span>
                         </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow border border-amber-200 overflow-hidden">
+                        <div class="p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <div class="font-bold text-amber-800">งานติดปัญหารอ Admin ตรวจสอบ</div>
+                                <div class="text-xs text-gray-500">Rider ต้องมีประวัติกดโทร + รูปหน้าบ้าน + GPS + เวลา Server ก่อนส่งเคส</div>
+                            </div>
+                            <button onclick="rider5LoadAdminIssues(true)" class="bg-slate-800 text-white rounded-lg px-3 py-2 text-xs font-bold">↻ รีเฟรช</button>
+                        </div>
+                        <div id="rider5-admin-issue-list" class="p-4 space-y-3"><div class="text-sm text-gray-400">กำลังโหลด...</div></div>
                     </div>
 
                     <div class="bg-white rounded-xl shadow overflow-hidden">
@@ -2724,6 +2741,92 @@ loadLiveAdminData=async function(){
 };
 </script>
 
+<!-- CHECKPOINT 5A: PRETTY CONFIRM -->
+<div id="fdg-confirm-modal" class="hidden fixed inset-0 z-[6000] bg-slate-950/60 backdrop-blur-[2px] items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div class="p-5 border-b">
+      <div id="fdg-confirm-kicker" class="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">ยืนยันรายการ</div>
+      <h3 id="fdg-confirm-title" class="font-bold text-xl text-slate-800 mt-1">ยืนยัน</h3>
+    </div>
+    <div id="fdg-confirm-body" class="p-5 text-sm text-slate-600"></div>
+    <div class="p-4 bg-slate-50 border-t grid grid-cols-2 gap-2">
+      <button id="fdg-confirm-cancel" class="border border-slate-300 rounded-xl py-2.5 font-bold text-slate-700">ยกเลิก</button>
+      <button id="fdg-confirm-ok" class="bg-indigo-600 text-white rounded-xl py-2.5 font-bold">ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOMER TASK -->
+<div id="rider5-task-modal" class="hidden fixed inset-0 z-[5200] bg-black/50 items-center justify-center p-3">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[95vh] overflow-hidden flex flex-col">
+    <div class="p-4 border-b flex justify-between gap-3">
+      <div><div class="text-[10px] font-bold text-emerald-600">RIDER COLLECTION</div><h3 id="rider5-task-name" class="font-bold text-lg">รายละเอียดลูกค้า</h3><div id="rider5-task-address" class="text-xs text-gray-500 mt-1"></div></div>
+      <button onclick="rider5CloseTaskModal()" class="text-2xl text-gray-400">×</button>
+    </div>
+    <div class="p-4 overflow-y-auto space-y-4">
+      <div class="grid grid-cols-3 gap-2">
+        <button id="rider5-profile-btn" class="border rounded-xl p-2.5 text-xs font-bold text-slate-700">ดูโปรไฟล์</button>
+        <button id="rider5-map-btn" class="border border-blue-200 bg-blue-50 rounded-xl p-2.5 text-xs font-bold text-blue-700">ดูแผนที่</button>
+        <button id="rider5-call-btn" class="bg-emerald-600 text-white rounded-xl p-2.5 text-sm font-extrabold">📞 โทรหา</button>
+      </div>
+      <div class="bg-slate-50 border rounded-xl p-3">
+        <div class="flex justify-between gap-3"><div><div class="text-[11px] text-gray-500">งวดที่ต้องเก็บ</div><div id="rider5-task-count" class="font-extrabold text-slate-800">0 งวด</div></div><div class="text-right"><div class="text-[11px] text-gray-500">ยอดรวมที่เลือก</div><div id="rider5-selected-total" class="font-extrabold text-rose-600 text-lg">0 ฿</div></div></div>
+        <div class="text-[10px] text-gray-400 mt-1">ค่าปรับ 50 บาท/วัน/งวด หลัง 18:00 สูงสุด 10 วัน = 500 บาทต่องวด</div>
+      </div>
+      <div id="rider5-installment-list" class="space-y-2"></div>
+      <div class="border rounded-xl p-3">
+        <div class="text-xs font-bold text-gray-700 mb-2">วิธีรับชำระ</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="rider5-method-cash" onclick="rider5SetMethod('CASH')" class="border-2 border-emerald-500 bg-emerald-50 text-emerald-800 rounded-xl p-3 font-bold text-sm">💵 เงินสด</button>
+          <button id="rider5-method-scan" onclick="rider5SetMethod('SCAN')" class="border rounded-xl p-3 font-bold text-sm text-blue-700">▦ สแกนปลายทาง</button>
+        </div>
+      </div>
+      <button id="rider5-proceed-btn" onclick="rider5ProceedPayment()" class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white rounded-xl p-3 font-extrabold">ดำเนินการรับชำระ</button>
+      <button onclick="rider5OpenIssueModal()" class="w-full border border-amber-300 bg-amber-50 text-amber-800 rounded-xl p-3 font-bold">⚠️ ติดปัญหา / เก็บเงินไม่ได้วันนี้</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOMER PROFILE -->
+<div id="rider5-profile-modal" class="hidden fixed inset-0 z-[5300] bg-black/50 items-center justify-center p-3">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden flex flex-col">
+    <div class="p-4 border-b flex justify-between items-start"><div><div class="text-[10px] font-bold text-indigo-600">CUSTOMER PROFILE</div><h3 id="rider5-profile-name" class="font-bold text-xl">ข้อมูลลูกค้า</h3></div><button onclick="rider5CloseProfile()" class="text-2xl text-gray-400">×</button></div>
+    <div id="rider5-profile-content" class="p-4 overflow-y-auto space-y-3 text-sm"></div>
+  </div>
+</div>
+
+<!-- ISSUE -->
+<div id="rider5-issue-modal" class="hidden fixed inset-0 z-[5400] bg-black/50 items-center justify-center p-3">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div class="p-4 border-b flex justify-between"><div><div class="text-[10px] font-bold text-amber-600">PROBLEM REPORT</div><h3 class="font-bold text-lg">ส่งงานติดปัญหา</h3></div><button onclick="rider5CloseIssueModal()" class="text-2xl text-gray-400">×</button></div>
+    <div class="p-4 space-y-3">
+      <div id="rider5-call-rule" class="text-xs bg-blue-50 border border-blue-200 rounded-xl p-3 text-blue-800"></div>
+      <select id="rider5-issue-reason" class="w-full border rounded-xl p-3 text-sm"><option value="NO_ANSWER">โทรไม่รับสาย / ไม่มีผู้รับสาย</option><option value="NOT_HOME">ลูกค้าไม่อยู่บ้าน</option><option value="REQUEST_DELAY">ลูกค้าขอเลื่อนชำระ</option><option value="WRONG_ADDRESS">ที่อยู่/พิกัดไม่ถูกต้อง</option><option value="OTHER">อื่น ๆ</option></select>
+      <textarea id="rider5-issue-note" class="w-full border rounded-xl p-3 text-sm" rows="3" placeholder="รายละเอียดเพิ่มเติม"></textarea>
+      <div id="rider5-issue-proof-state" class="text-xs text-gray-500 bg-slate-50 rounded-xl p-3">ยังไม่มีรูปหน้าบ้านและ GPS</div>
+      <button onclick="rider5CaptureIssueProof()" class="w-full bg-slate-800 text-white rounded-xl p-3 font-bold">📷 ถ่ายรูปหน้าบ้าน + GPS</button>
+      <button onclick="rider5SubmitIssue()" class="w-full bg-amber-500 text-slate-900 rounded-xl p-3 font-extrabold">ยืนยันส่งงานติดปัญหา</button>
+    </div>
+  </div>
+</div>
+
+<!-- CAMERA -->
+<div id="rider5-camera-modal" class="hidden fixed inset-0 z-[6500] bg-black items-center justify-center">
+  <div class="w-full max-w-lg h-full max-h-screen flex flex-col bg-black">
+    <div class="p-3 text-white flex justify-between items-center"><div><div id="rider5-camera-title" class="font-bold">ถ่ายหลักฐาน</div><div id="rider5-camera-gps" class="text-[10px] text-gray-300">กำลังขอ GPS...</div></div><button onclick="rider5CloseCamera()" class="text-2xl px-3">×</button></div>
+    <div class="flex-1 relative bg-black flex items-center justify-center overflow-hidden"><video id="rider5-camera-video" autoplay playsinline class="w-full h-full object-contain"></video><img id="rider5-camera-preview" class="hidden w-full h-full object-contain" alt="preview"><div id="rider5-camera-quality" class="absolute bottom-3 left-3 right-3 bg-black/60 text-white text-xs p-2 rounded-lg text-center"></div></div>
+    <div class="p-4 bg-black grid grid-cols-2 gap-2"><button id="rider5-camera-retake" onclick="rider5RetakeCamera()" class="hidden bg-slate-700 text-white rounded-xl p-3 font-bold">ถ่ายใหม่</button><button id="rider5-camera-shot" onclick="rider5TakePhoto()" class="bg-white text-slate-900 rounded-xl p-3 font-extrabold">● ถ่ายรูป</button><button id="rider5-camera-use" onclick="rider5UsePhoto()" class="hidden bg-emerald-600 text-white rounded-xl p-3 font-extrabold">ใช้รูปนี้</button></div>
+  </div>
+</div>
+
+<!-- DESTINATION SCAN -->
+<div id="rider5-scan-modal" class="hidden fixed inset-0 z-[5500] bg-black/50 items-center justify-center p-3">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div class="p-4 border-b flex justify-between"><div><div class="text-[10px] font-bold text-blue-600">SCAN AT CUSTOMER</div><h3 class="font-bold text-lg">ให้ลูกค้าสแกนจ่ายบนมือถือ Rider</h3></div><button onclick="rider5CloseScanModal()" class="text-2xl text-gray-400">×</button></div>
+    <div class="p-4 text-center space-y-3"><div class="text-xs text-gray-500">ยอดต้องตรงตามระบบเท่านั้น</div><div id="rider5-scan-amount" class="text-3xl font-extrabold text-blue-700">0 ฿</div><img id="rider5-scan-qr" class="w-64 h-64 mx-auto border rounded-xl bg-white" alt="PromptPay QR"><div class="text-xs bg-blue-50 border border-blue-200 rounded-xl p-3 text-blue-800">ลูกค้าสแกนจากมือถือของลูกค้า → หลังโอนเสร็จ Rider ถ่ายสลิปบนมือถือของลูกค้าด้วยกล้องระบบ</div><button onclick="rider5CaptureScanSlip()" class="w-full bg-blue-600 text-white rounded-xl p-3 font-extrabold">📷 ถ่ายสลิปและตรวจ EasySlip</button></div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    CHECKPOINT 4 — LIVE STAFF / RIDER MANAGEMENT
@@ -3574,6 +3677,7 @@ setTimeout(()=>checkpoint4RefreshManagement(false),1200);
 </script>
 
 
+<script src="./rider5a.js"></script>
 <script id="admin-pwa-install">
 (() => {
   let deferredAdminInstall = null;
