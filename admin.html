@@ -167,7 +167,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="riderGroupedRefreshNow()" class="p-2 bg-emerald-500 hover:bg-emerald-700 rounded-lg text-xs font-bold flex items-center gap-1">
+                <button onclick="rider5RefreshNow()" class="p-2 bg-emerald-500 hover:bg-emerald-700 rounded-lg text-xs font-bold flex items-center gap-1">
                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> รีเฟรช
                 </button>
             <button onclick="logout()" class="p-2 bg-emerald-700 hover:bg-emerald-800 rounded-lg text-xs font-bold flex items-center gap-1">
@@ -3052,7 +3052,8 @@ async function checkpoint4RefreshManagement(showMessage=false){
   checkpoint4Busy=true;
   try{
     const [staffRes,jobRes,areaRes]=await Promise.all([
-      adminSb.rpc("fdg_staff_management_snapshot"),
+      // Full staff roster is independent from per-job Rider eligibility.
+      adminSb.rpc("fdg_staff_management_options"),
       adminSb.rpc("fdg_collection_assignment_snapshot"),
       adminSb.from("service_areas")
         .select("id,code,province,district,subdistrict,display_name,is_active")
@@ -3068,14 +3069,8 @@ async function checkpoint4RefreshManagement(showMessage=false){
     if(areaRes.error)throw areaRes.error;
     checkpoint4Areas=areaRes.data||[];
 
-    if(staffRes.error){
-      console.error("Staff snapshot:",staffRes.error);
-      const fallback=await adminSb.rpc("fdg_staff_management_options");
-      if(fallback.error)throw staffRes.error;
-      checkpoint4Staff=fallback.data?.staff||[];
-    }else{
-      checkpoint4Staff=staffRes.data?.staff||[];
-    }
+    if(staffRes.error)throw staffRes.error;
+    checkpoint4Staff=staffRes.data?.staff||[];
 
     if(jobRes.error){
       console.warn("Assignment snapshot:",jobRes.error);
@@ -3579,243 +3574,6 @@ setTimeout(()=>checkpoint4RefreshManagement(false),1200);
 </script>
 
 
-
-<!-- CHECKPOINT 5A-1: GROUPED CUSTOMER TASK DETAIL -->
-<div id="rider-grouped-detail-modal" class="hidden fixed inset-0 z-[5200] bg-black/50 items-center justify-center p-3">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[94vh] overflow-hidden flex flex-col">
-    <div class="p-4 border-b flex justify-between gap-3">
-      <div>
-        <div class="text-[10px] font-bold text-emerald-600">GROUPED RIDER TASK</div>
-        <h3 id="rider-grouped-detail-name" class="font-bold text-lg">รายละเอียดลูกค้า</h3>
-        <div id="rider-grouped-detail-address" class="text-xs text-gray-500 mt-1"></div>
-      </div>
-      <button onclick="closeRiderGroupedDetail()" class="text-2xl text-gray-400">×</button>
-    </div>
-
-    <div class="p-4 overflow-y-auto space-y-3">
-      <div class="grid grid-cols-3 gap-2">
-        <button id="rider-grouped-map" class="border border-blue-200 bg-blue-50 text-blue-700 rounded-xl p-2.5 text-xs font-bold">📍 แผนที่</button>
-        <a id="rider-grouped-call" href="#" class="bg-emerald-600 text-white rounded-xl p-2.5 text-sm font-extrabold text-center">📞 โทรหา</a>
-        <button onclick="closeRiderGroupedDetail()" class="border rounded-xl p-2.5 text-xs font-bold">ปิด</button>
-      </div>
-
-      <div class="bg-slate-50 border rounded-xl p-3">
-        <div class="flex justify-between gap-3">
-          <div>
-            <div class="text-[11px] text-gray-500">งานที่ถึงกำหนด/ค้าง</div>
-            <div id="rider-grouped-detail-count" class="font-extrabold text-slate-800">0 งวด</div>
-          </div>
-          <div class="text-right">
-            <div class="text-[11px] text-gray-500">ยอดเก็บรวมวันนี้</div>
-            <div id="rider-grouped-detail-total" class="font-extrabold text-rose-600 text-lg">0 ฿</div>
-          </div>
-        </div>
-        <div class="text-[10px] text-gray-400 mt-1">
-          ค่าปรับ: 50 บาท/วัน/งวด หลัง 18:00 • สูงสุด 10 วัน = 500 บาทต่องวด
-        </div>
-      </div>
-
-      <div id="rider-grouped-installments" class="space-y-2"></div>
-
-      <div class="text-xs bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-800">
-        รอบนี้ใช้ทดสอบ “รวมการ์ด + งวดค้าง + ค่าปรับ + ข้อมูลจำลอง” ก่อน
-        ปุ่มรับเงินจริงแบบกล้อง/GPS/SCAN ปลายทางจะต่อใน 5A-2 เพื่อไม่ให้ตัดยอดผิดระหว่างทดสอบ Fixture
-      </div>
-    </div>
-  </div>
-</div>
-
-
-
-<script id="checkpoint-5a1-grouped-cards">
-let riderGroupedTasks=[];
-let riderGroupedRefreshTimer=null;
-
-function riderGroupedMoney(v){
-  return liveMoney(Number(v||0));
-}
-function riderGroupedAddress(g){
-  return [
-    g?.home_address,
-    g?.home_subdistrict?`ต.${g.home_subdistrict}`:"",
-    g?.home_district?`อ.${g.home_district}`:""
-  ].filter(Boolean).join(" ");
-}
-function riderGroupedDate(d){
-  if(!d)return "-";
-  try{
-    return new Date(`${d}T00:00:00`).toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"2-digit"});
-  }catch(_){return d;}
-}
-
-const riderGroupedBaseLoadLiveRiderData=loadLiveRiderData;
-loadLiveRiderData=async function(opts={}){
-  await riderGroupedBaseLoadLiveRiderData(opts);
-
-  if(!currentUser || String(currentUser.role)!=="rider")return;
-
-  try{
-    const {data,error}=await adminSb.rpc("fdg_rider_grouped_test_snapshot");
-    if(error)throw error;
-    riderGroupedTasks=data?.groups||[];
-
-    const target=riderGroupedTasks.reduce((s,g)=>s+Number(g.total_due||0),0);
-    const targetEl=document.getElementById("rider-target-today");
-    if(targetEl)targetEl.textContent=riderGroupedMoney(target);
-
-    renderLiveRiderTaskList();
-
-    const status=document.getElementById("rider-live-refresh-state");
-    if(status){
-      status.textContent=`อัปเดตล่าสุด ${new Date().toLocaleTimeString("th-TH")} • อัตโนมัติทุก 10 วินาที`;
-    }
-  }catch(err){
-    console.error("Grouped task snapshot:",err);
-    if(!opts.silent)showToast(err?.message||"โหลดงานแบบรวมลูกค้าไม่สำเร็จ",false);
-  }
-};
-
-const riderGroupedBaseRender=renderLiveRiderTaskList;
-renderLiveRiderTaskList=function(){
-  if(currentRiderTab!=="pending"){
-    riderGroupedBaseRender();
-    return;
-  }
-
-  const box=document.getElementById("rider-task-list");
-  if(!box)return;
-
-  if(!riderGroupedTasks.length){
-    box.innerHTML='<div class="text-center text-sm text-emerald-600 bg-white border rounded-xl p-6 font-bold">✓ ไม่มีงานที่ถึงกำหนด/ค้างในวันนี้</div>';
-    return;
-  }
-
-  box.innerHTML=riderGroupedTasks.map((g,idx)=>`
-    <div class="bg-white rounded-2xl shadow border overflow-hidden">
-      <div class="p-4 space-y-3">
-        <div class="flex justify-between gap-3">
-          <div class="min-w-0">
-            <div class="flex items-start gap-2">
-              <span class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-xs shrink-0">${idx+1}</span>
-              <div>
-                <div class="font-extrabold text-slate-800">${liveEsc(g.customer_name||"ลูกค้า")}</div>
-                <div class="text-[10px] text-gray-400">${liveEsc(g.customer_code||"")}</div>
-                <div class="text-xs text-gray-600 mt-1">${liveEsc(riderGroupedAddress(g)||"-")}</div>
-              </div>
-            </div>
-          </div>
-          <div class="text-right shrink-0">
-            <div class="text-[10px] text-gray-500">ยอดเก็บรวม</div>
-            <div class="text-xl font-extrabold text-rose-600">${riderGroupedMoney(g.total_due)}</div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-3 gap-2 text-center">
-          <div class="bg-slate-50 rounded-xl p-2">
-            <div class="text-[10px] text-gray-500">ค้าง</div>
-            <div class="font-extrabold text-slate-800">${Number(g.installment_count||0)} งวด</div>
-          </div>
-          <div class="bg-slate-50 rounded-xl p-2">
-            <div class="text-[10px] text-gray-500">ยอดงวด</div>
-            <div class="font-extrabold text-indigo-700">${riderGroupedMoney(g.contract_due)}</div>
-          </div>
-          <div class="bg-red-50 rounded-xl p-2">
-            <div class="text-[10px] text-gray-500">ค่าปรับ</div>
-            <div class="font-extrabold text-red-600">${riderGroupedMoney(g.late_fee_total)}</div>
-          </div>
-        </div>
-
-        <div class="text-[11px] text-gray-500 bg-amber-50 border border-amber-100 rounded-lg p-2">
-          งวดเก่าสุด ${riderGroupedDate(g.oldest_due_date)}
-          ${Number(g.max_late_days||0)>0?` • เลยกำหนดสูงสุด ${Number(g.max_late_days)} วัน`:""}
-        </div>
-
-        <div class="grid grid-cols-3 gap-2">
-          <button onclick="openRiderGroupedMap('${g.customer_id}')" class="border border-blue-200 bg-blue-50 text-blue-700 rounded-xl p-2.5 text-xs font-bold">📍 แผนที่</button>
-          <a href="tel:${liveEsc(g.phone||"")}" class="bg-emerald-600 text-white rounded-xl p-2.5 text-sm font-extrabold text-center">📞 โทร</a>
-          <button onclick="openRiderGroupedDetail('${g.customer_id}')" class="bg-slate-900 text-white rounded-xl p-2.5 text-xs font-extrabold">ดู ${Number(g.installment_count||0)} งวด</button>
-        </div>
-      </div>
-    </div>
-  `).join("");
-
-  try{lucide.createIcons();}catch(_){}
-};
-
-window.openRiderGroupedDetail=function(customerId){
-  const g=riderGroupedTasks.find(x=>String(x.customer_id)===String(customerId));
-  if(!g)return;
-
-  document.getElementById("rider-grouped-detail-name").textContent=`${g.customer_name||"-"} • ${g.customer_code||""}`;
-  document.getElementById("rider-grouped-detail-address").textContent=riderGroupedAddress(g)||"-";
-  document.getElementById("rider-grouped-detail-count").textContent=`${Number(g.installment_count||0)} งวด`;
-  document.getElementById("rider-grouped-detail-total").textContent=riderGroupedMoney(g.total_due);
-
-  const call=document.getElementById("rider-grouped-call");
-  call.href=g.phone?`tel:${g.phone}`:"#";
-
-  const map=document.getElementById("rider-grouped-map");
-  map.onclick=()=>openRiderGroupedMap(customerId);
-
-  const rows=g.installments||[];
-  document.getElementById("rider-grouped-installments").innerHTML=rows.map((it,idx)=>`
-    <div class="border rounded-xl p-3 ${idx===0?"border-emerald-300 bg-emerald-50/30":""}">
-      <div class="flex justify-between gap-3">
-        <div>
-          <div class="font-bold text-slate-800">งวด ${it.installment_no} • ${riderGroupedDate(it.due_date)}</div>
-          <div class="text-[11px] text-gray-500 mt-1">
-            ยอดงวด ${riderGroupedMoney(it.contract_due)}
-            ${Number(it.late_fee_amount||0)>0?` • <span class="text-red-600 font-bold">ค่าปรับ ${riderGroupedMoney(it.late_fee_amount)} (${Number(it.late_days||0)} วัน)</span>`:" • ยังไม่มีค่าปรับ"}
-          </div>
-        </div>
-        <div class="text-right">
-          <div class="text-[10px] text-gray-500">รวม</div>
-          <div class="font-extrabold text-rose-600">${riderGroupedMoney(it.total_due)}</div>
-        </div>
-      </div>
-    </div>
-  `).join("");
-
-  const modal=document.getElementById("rider-grouped-detail-modal");
-  modal.classList.remove("hidden");
-  modal.classList.add("flex");
-};
-window.closeRiderGroupedDetail=function(){
-  const modal=document.getElementById("rider-grouped-detail-modal");
-  modal?.classList.add("hidden");
-  modal?.classList.remove("flex");
-};
-
-window.openRiderGroupedMap=function(customerId){
-  const g=riderGroupedTasks.find(x=>String(x.customer_id)===String(customerId));
-  const lat=Number(g?.gps_lat);
-  const lng=Number(g?.gps_lng);
-  if(!Number.isFinite(lat)||!Number.isFinite(lng)||!lat||!lng){
-    showToast("ลูกค้ารายนี้ไม่มี GPS จำลอง",false);return;
-  }
-  window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lat+","+lng)}`,"_blank","noopener");
-};
-
-window.riderGroupedRefreshNow=async function(){
-  showToast("กำลังรีเฟรชงาน...",true);
-  await loadLiveRiderData({silent:true});
-  showToast("อัปเดตงานแล้ว",true);
-};
-
-phase2d2StartRiderRefresh=function(){
-  if(liveRiderRefreshTimer)clearInterval(liveRiderRefreshTimer);
-  if(riderGroupedRefreshTimer)clearInterval(riderGroupedRefreshTimer);
-  riderGroupedRefreshTimer=setInterval(()=>{
-    if(currentUser?.role==="rider")loadLiveRiderData({silent:true});
-  },10000);
-};
-
-document.addEventListener("visibilitychange",()=>{
-  if(document.visibilityState==="visible" && currentUser?.role==="rider"){
-    loadLiveRiderData({silent:true});
-  }
-});
-</script>
 
 <script id="admin-pwa-install">
 (() => {
@@ -5003,5 +4761,6 @@ liveSetBusy=function(on,msg="กำลังโหลดข้อมูล..."){
   }
 };
 </script>
+<script src="./rider5a.js?v=5a2-20260909"></script>
 
 </body></html>
