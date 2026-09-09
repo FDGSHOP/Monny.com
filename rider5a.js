@@ -16,6 +16,44 @@ let rider5IssueProof=null;
 let rider5ScanBatch=null;
 let rider5AdminIssues=[];
 
+function rider5EnsureUi(){
+  if(!document.getElementById('fdg-confirm-modal'))document.body.insertAdjacentHTML('beforeend',`
+    <div id="fdg-confirm-modal" class="hidden fixed inset-0 z-[5700] bg-black/60 items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4">
+        <div><div id="fdg-confirm-kicker" class="text-[10px] font-extrabold text-indigo-600"></div><h3 id="fdg-confirm-title" class="text-lg font-extrabold text-slate-900"></h3></div>
+        <div id="fdg-confirm-body" class="text-sm text-slate-600"></div>
+        <div class="grid grid-cols-2 gap-2"><button id="fdg-confirm-cancel" class="border rounded-xl py-2.5 font-bold">ยกเลิก</button><button id="fdg-confirm-ok" class="bg-indigo-600 text-white rounded-xl py-2.5 font-bold">ยืนยัน</button></div>
+      </div>
+    </div>`);
+
+  if(!document.getElementById('rider5-task-modal'))document.body.insertAdjacentHTML('beforeend',`
+    <div id="rider5-task-modal" class="hidden fixed inset-0 z-[5200] bg-black/55 items-center justify-center p-3">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[95vh] overflow-hidden flex flex-col">
+        <div class="p-4 border-b flex justify-between gap-3"><div><div class="text-[10px] font-extrabold text-emerald-600">GROUPED COLLECTION • OLDEST FIRST</div><h3 id="rider5-task-name" class="font-extrabold text-lg"></h3><div id="rider5-task-address" class="text-xs text-gray-500"></div></div><button onclick="rider5CloseTaskModal()" class="text-2xl text-gray-400">×</button></div>
+        <div class="p-4 overflow-y-auto space-y-3">
+          <div class="grid grid-cols-3 gap-2"><button id="rider5-profile-btn" class="border rounded-xl p-2 text-xs font-bold">ข้อมูลลูกค้า</button><button id="rider5-map-btn" class="border border-blue-200 bg-blue-50 text-blue-700 rounded-xl p-2 text-xs font-bold">📍 แผนที่</button><button id="rider5-call-btn" class="bg-emerald-600 text-white rounded-xl p-2 text-xs font-bold">📞 โทรหา</button></div>
+          <div class="flex justify-between bg-slate-50 border rounded-xl p-3"><span class="text-xs text-gray-500">งวดที่ชำระได้</span><b id="rider5-task-count"></b></div>
+          <div id="rider5-installment-list" class="space-y-2"></div>
+          <div class="grid grid-cols-2 gap-2"><button id="rider5-method-cash" onclick="rider5SetMethod('CASH')" class="border rounded-xl p-3 font-bold text-sm text-emerald-700">เงินสด CASH</button><button id="rider5-method-scan" onclick="rider5SetMethod('SCAN')" class="border rounded-xl p-3 font-bold text-sm text-blue-700">SCAN เข้าบริษัท</button></div>
+          <div class="flex justify-between items-center bg-rose-50 border border-rose-100 rounded-xl p-3"><b>ยอดรับจริงรวม</b><b id="rider5-selected-total" class="text-xl text-rose-600"></b></div>
+          <button onclick="rider5ProceedPayment()" class="w-full bg-slate-900 text-white rounded-xl p-3 font-extrabold">ดำเนินการรับชำระ</button>
+        </div>
+      </div>
+    </div>
+    <div id="rider5-profile-modal" class="hidden fixed inset-0 z-[5300] bg-black/55 items-center justify-center p-3"><div class="bg-white rounded-2xl w-full max-w-lg max-h-[94vh] overflow-hidden flex flex-col"><div class="p-4 border-b flex justify-between"><h3 id="rider5-profile-name" class="font-extrabold"></h3><button onclick="rider5CloseProfile()" class="text-2xl text-gray-400">×</button></div><div id="rider5-profile-content" class="p-4 overflow-y-auto space-y-3 text-sm"></div></div></div>
+    <div id="rider5-camera-modal" class="hidden fixed inset-0 z-[5600] bg-black/80 items-center justify-center p-3"><div class="bg-white rounded-2xl w-full max-w-lg overflow-hidden"><div class="p-4 border-b flex justify-between"><h3 id="rider5-camera-title" class="font-extrabold"></h3><button onclick="rider5CloseCamera()" class="text-2xl text-gray-400">×</button></div><div class="p-4 space-y-3"><video id="rider5-camera-video" playsinline class="w-full max-h-[55vh] bg-black rounded-xl object-contain"></video><img id="rider5-camera-preview" class="hidden w-full max-h-[55vh] bg-black rounded-xl object-contain" alt="หลักฐาน"><div id="rider5-camera-quality" class="text-xs text-gray-500"></div><div id="rider5-camera-gps" class="text-xs text-blue-700"></div><div class="grid grid-cols-2 gap-2"><button id="rider5-camera-shot" onclick="rider5TakePhoto()" class="col-span-2 bg-slate-900 text-white rounded-xl p-3 font-bold">ถ่ายภาพ</button><button id="rider5-camera-retake" onclick="rider5RetakeCamera()" class="hidden border rounded-xl p-3 font-bold">ถ่ายใหม่</button><button id="rider5-camera-use" onclick="rider5UsePhoto()" class="hidden bg-emerald-600 text-white rounded-xl p-3 font-bold">ใช้ภาพนี้</button></div></div></div></div>
+    <div id="rider5-scan-modal" class="hidden fixed inset-0 z-[5400] bg-black/55 items-center justify-center p-3"><div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 text-center"><div class="flex justify-between"><h3 class="font-extrabold text-blue-800">SCAN เข้าบัญชีบริษัท</h3><button onclick="rider5CloseScanModal()" class="text-2xl text-gray-400">×</button></div><div id="rider5-scan-amount" class="text-3xl font-extrabold text-blue-700"></div><img id="rider5-scan-qr" class="w-64 max-w-full mx-auto border rounded-xl" alt="PromptPay QR"><div class="text-xs text-gray-500">เมื่อลูกค้าชำระแล้ว ให้ถ่ายสลิปจากหน้าจอลูกค้าเพื่อตรวจ EasySlip</div><button onclick="rider5CaptureScanSlip()" class="w-full bg-blue-600 text-white rounded-xl p-3 font-extrabold">ถ่ายสลิปและตรวจ EasySlip</button></div></div>
+    <div id="rider5-issue-modal" class="hidden fixed inset-0 z-[5450] bg-black/55 items-center justify-center p-3"><div class="bg-white rounded-2xl w-full max-w-md p-5 space-y-4"><div class="flex justify-between"><h3 class="font-extrabold text-amber-800">ส่งงานติดปัญหา</h3><button onclick="rider5CloseIssueModal()" class="text-2xl text-gray-400">×</button></div><div id="rider5-call-rule" class="text-xs bg-amber-50 border border-amber-200 rounded-xl p-3"></div><select id="rider5-issue-reason" class="w-full border rounded-xl p-3 text-sm"><option value="NO_ANSWER">โทรไม่รับสาย</option><option value="NOT_HOME">ลูกค้าไม่อยู่บ้าน</option><option value="REQUEST_DELAY">ลูกค้าขอเลื่อนชำระ</option><option value="WRONG_ADDRESS">ที่อยู่/พิกัดไม่ถูกต้อง</option><option value="OTHER">อื่น ๆ</option></select><textarea id="rider5-issue-note" class="w-full border rounded-xl p-3 text-sm" rows="3" placeholder="รายละเอียดเพิ่มเติม"></textarea><div id="rider5-issue-proof-state" class="text-xs text-gray-500"></div><button onclick="rider5CaptureIssueProof()" class="w-full border border-amber-300 text-amber-800 rounded-xl p-3 font-bold">ถ่ายรูปหน้าบ้าน + GPS</button><button onclick="rider5SubmitIssue()" class="w-full bg-amber-600 text-white rounded-xl p-3 font-extrabold">ส่งให้ Admin ตรวจ</button></div></div>`);
+
+  if(!document.getElementById('rider5-admin-issue-card')){
+    const monitor=document.getElementById('admin-rider-monitor');
+    const card=monitor?.closest('.bg-white');
+    if(card)card.insertAdjacentHTML('afterend',`<div id="rider5-admin-issue-card" class="bg-white rounded-xl shadow border border-amber-100 overflow-hidden"><div class="p-4 border-b flex justify-between items-center"><div><div class="font-bold text-amber-800">งานติดปัญหารอ Admin Review</div><div class="text-xs text-gray-500">ตรวจรูป GPS และประวัติกดโทรก่อนยืนยัน</div></div><button onclick="rider5LoadAdminIssues(true)" class="text-xs font-bold text-amber-700">↻ รีเฟรช</button></div><div id="rider5-admin-issue-list" class="p-4 space-y-2"><div class="text-sm text-gray-400">กำลังโหลด...</div></div></div>`);
+  }
+}
+
+rider5EnsureUi();
+
 window.fdgConfirm=function({title='ยืนยันรายการ',body='',confirmText='ยืนยัน',kicker='ยืนยันรายการ',danger=false}={}){
   return new Promise(resolve=>{
     const modal=document.getElementById('fdg-confirm-modal');
