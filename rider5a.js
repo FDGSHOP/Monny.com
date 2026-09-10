@@ -73,35 +73,64 @@ window.fdgConfirm=function({title='ยืนยันรายการ',body=''
 function rider5FmtDue(d){if(!d)return '-';return new Date(`${d}T00:00:00`).toLocaleDateString('th-TH',{day:'numeric',month:'short'});}
 function rider5Address(g){return [g?.home_address,g?.home_subdistrict?`ต.${g.home_subdistrict}`:'',g?.home_district?`อ.${g.home_district}`:''].filter(Boolean).join(' ');}
 
+let rider5Loaded=false;
+let rider5LoadError='';
+let rider5LoadPromise=null;
+let rider5Generation=0;
 const rider5BaseLoadLiveRiderData=loadLiveRiderData;
-loadLiveRiderData=async function(opts={}){
-  await rider5BaseLoadLiveRiderData(opts);
-  if(!currentUser||currentUser.role!=='rider')return;
-  try{
-    const {data,error}=await adminSb.rpc('fdg_rider_task_groups_snapshot');
-    if(error)throw error;
-    rider5TaskGroups=data?.groups||[];
-    rider5Issues=data?.issues_today||[];
-    rider5ScanBatches=data?.scan_batches||[];
-    const target=rider5TaskGroups.filter(g=>!g.issue_today).reduce((s,g)=>s+Number(g.total_due||0),0);
-    const t=document.getElementById('rider-target-today');if(t)t.textContent=liveMoney(target);
-    const r=document.getElementById('rider-live-refresh-state');if(r)r.textContent=`อัปเดตล่าสุด ${new Date().toLocaleTimeString('th-TH')} • อัตโนมัติทุก 10 วินาที`;
-    renderLiveRiderTaskList();
-  }catch(err){console.error(err);if(!opts.silent)showToast(err?.message||'โหลดงาน Rider ไม่สำเร็จ',false);}
+loadLiveRiderData=function(opts={}){
+  if(!currentUser||currentUser.role!=='rider')return Promise.resolve(false);
+  if(rider5LoadPromise)return rider5LoadPromise;
+  const actor=currentUser.id,generation=rider5Generation;
+  const pending=(async()=>{
+    try{
+      const baseOk=await rider5BaseLoadLiveRiderData(opts);
+      if(baseOk===false)throw new Error('โหลดข้อมูลยอดเงินไม่สำเร็จ');
+      if(currentUser?.id!==actor||generation!==rider5Generation)return false;
+      const {data,error}=await adminSb.rpc('fdg_rider_task_groups_snapshot');
+      if(error)throw error;
+      if(currentUser?.id!==actor||generation!==rider5Generation)return false;
+      if(!data||!Array.isArray(data.groups))throw new Error('ข้อมูลรายการงานไม่ครบ');
+      rider5TaskGroups=data.groups;rider5Issues=data.issues_today||[];rider5ScanBatches=data.scan_batches||[];
+      rider5Loaded=true;rider5LoadError='';
+      const target=rider5TaskGroups.filter(g=>!g.issue_today).reduce((sum,g)=>sum+Number(g.total_due||0),0);
+      const t=document.getElementById('rider-target-today');if(t)t.textContent=liveMoney(target);
+      const r=document.getElementById('rider-live-refresh-state');if(r)r.textContent=`อัปเดตล่าสุด ${new Date().toLocaleTimeString('th-TH')} • อัตโนมัติทุก 10 วินาที`;
+      renderLiveRiderTaskList();return true;
+    }catch(err){
+      if(currentUser?.id!==actor||generation!==rider5Generation)return false;
+      rider5LoadError=err?.message||'โหลดงาน Rider ไม่สำเร็จ';
+      renderLiveRiderTaskList();
+      if(!opts.silent)showToast(rider5LoadError,false);
+      return false;
+    }
+  })();
+  rider5LoadPromise=pending;
+  pending.finally(()=>{if(rider5LoadPromise===pending)rider5LoadPromise=null;});
+  return pending;
 };
-
 phase2d2StartRiderRefresh=function(){
   if(liveRiderRefreshTimer)clearInterval(liveRiderRefreshTimer);
   if(rider5RefreshTimer)clearInterval(rider5RefreshTimer);
   rider5RefreshTimer=setInterval(()=>{if(currentUser?.role==='rider')loadLiveRiderData({silent:true});},10000);
 };
-window.rider5RefreshNow=async function(){showToast('กำลังรีเฟรชงาน...',true);await loadLiveRiderData({silent:true});showToast('อัปเดตงานล่าสุดแล้ว',true);};
+window.rider5RefreshNow=async function(){const ok=await loadLiveRiderData({silent:true});showToast(ok?'อัปเดตงานล่าสุดแล้ว':'โหลดข้อมูลไม่สำเร็จ กรุณารีเฟรชอีกครั้ง',ok);return ok;};
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&currentUser?.role==='rider')loadLiveRiderData({silent:true});});
+const rider5BaseLogout=logout;
+logout=async function(){
+  rider5Generation++;
+  if(rider5RefreshTimer)clearInterval(rider5RefreshTimer);
+  rider5RefreshTimer=null;rider5LoadPromise=null;rider5Loaded=false;rider5LoadError='';
+  rider5TaskGroups=[];rider5Issues=[];rider5ScanBatches=[];rider5CurrentGroup=null;rider5Detail=null;rider5ScanBatch=null;
+  rider5CloseCamera();
+  await rider5BaseLogout();
+};
 
 function rider5GroupCompleted(rows){const m=new Map();for(const c of rows){const k=String(c.customer_id||'');if(!m.has(k))m.set(k,[]);m.get(k).push(c);}return [...m.entries()].map(([customer_id,items])=>({customer_id,items}));}
 
 renderLiveRiderTaskList=function(){
   const box=document.getElementById('rider-task-list');if(!box)return;
+  if(rider5LoadError||!rider5Loaded){box.innerHTML='<div class="text-center text-sm bg-white border rounded-xl p-6">'+(rider5LoadError?'โหลดรายการงานไม่สำเร็จ กรุณารีเฟรชก่อนรับชำระ':'กำลังโหลดรายการงาน...')+'</div>';return;}
   if(currentRiderTab==='pending'){
     const rows=rider5TaskGroups.filter(g=>!g.issue_today);
     if(!rows.length){box.innerHTML='<div class="text-center text-sm text-emerald-600 bg-white border rounded-xl p-6 font-bold">✓ ไม่มีงานที่ต้องเก็บค้างในวันนี้</div>';return;}
@@ -119,7 +148,7 @@ renderLiveRiderTaskList=function(){
   if(currentRiderTab==='waiting'){
     const rows=rider5ScanBatches.filter(b=>['pending','verifying','failed'].includes(String(b.status)));
     if(!rows.length){box.innerHTML='<div class="text-center text-sm text-gray-400 bg-white border rounded-xl p-6">ไม่มีรายการ SCAN ที่กำลังตรวจ</div>';return;}
-    box.innerHTML=rows.map(b=>`<div class="bg-white border border-blue-200 rounded-xl p-4"><div class="flex justify-between"><div><div class="font-bold">${liveEsc(b.customer_name||'-')}</div><div class="text-xs text-blue-600">${liveEsc(b.batch_code||'')}</div></div><div class="font-extrabold text-blue-700">${liveMoney(b.total_amount||0)}</div></div><div class="text-xs text-gray-500 mt-2">สถานะ: ${liveEsc(String(b.status||'').toUpperCase())}</div></div>`).join('');return;
+    box.innerHTML=rows.map(b=>`<div class="bg-white border border-blue-200 rounded-xl p-4"><div class="flex justify-between"><div><div class="font-bold">${liveEsc(b.customer_name||'-')}</div><div class="text-xs text-blue-600">${liveEsc(b.batch_code||'')}</div></div><div class="font-extrabold text-blue-700">${liveMoney(b.total_amount||0)}</div></div><div class="text-xs text-gray-500 mt-2">สถานะ: ${liveEsc(String(b.status||'').toUpperCase())}</div><button onclick="rider5ResumeScan('${b.id}')" class="mt-3 w-full border rounded-xl p-2 font-bold">เปิดรายการ / ตรวจสลิปอีกครั้ง</button></div>`).join('');return;
   }
   const groups=rider5GroupCompleted(liveRiderCollections.filter(x=>['collected','verified','returned'].includes(String(x.status))));
   if(!groups.length){box.innerHTML='<div class="text-center text-sm text-gray-400 bg-white border rounded-xl p-6">ยังไม่มีรายการที่เก็บสำเร็จ</div>';return;}
@@ -127,6 +156,7 @@ renderLiveRiderTaskList=function(){
 };
 
 window.rider5OpenTask=async function(customerId){
+  if(!rider5Loaded||rider5LoadError){showToast('กรุณารีเฟรชรายการงานก่อน',false);return;}
   const group=rider5TaskGroups.find(g=>String(g.customer_id)===String(customerId));if(!group)return;rider5CurrentGroup=group;rider5Method='CASH';
   try{
     const {data,error}=await adminSb.rpc('fdg_rider_customer_detail',{p_customer_id:customerId});if(error)throw error;rider5Detail=data;
@@ -164,11 +194,11 @@ window.rider5RetakeCamera=function(){rider5CapturedBlob=null;document.getElement
 async function rider5UploadEvidence(blob,kind){const ext=(blob.type||'image/jpeg').includes('png')?'png':'jpg';const path=`${currentUser.id}/${phase2d2BangkokDate()}/field-${kind}-${Date.now()}.${ext}`;const {error}=await adminSb.storage.from('payment-evidence').upload(path,blob,{cacheControl:'3600',upsert:false,contentType:blob.type||'image/jpeg'});if(error)throw error;return path;}
 window.rider5UsePhoto=async function(){if(!rider5CapturedBlob){showToast('กรุณาถ่ายรูปก่อน',false);return;}if(!rider5CapturedGps){showToast('ต้องได้ GPS ก่อน',false);return;}const b=rider5CapturedBlob,g=rider5CapturedGps,m=rider5CameraMode;rider5CloseCamera();if(m==='CASH')await rider5FinalizeCashWithProof(b,g);else if(m==='ISSUE'){rider5IssueProof={blob:b,gps:g};document.getElementById('rider5-issue-proof-state').innerHTML=`<b class="text-emerald-700">✓ มีรูปหน้าบ้าน + GPS แล้ว</b><br>GPS ${g.lat.toFixed(6)}, ${g.lng.toFixed(6)} • ±${Math.round(g.accuracy||0)} ม.`;}else if(m==='SCAN_SLIP')await rider5VerifyDestinationScan(b,g);};
 
-window.rider5ProceedPayment=async function(){const ids=rider5SelectedCollections();if(!ids.length){showToast('เลือกอย่างน้อย 1 งวด',false);return;}if(String(liveRiderDashboard?.state)!=='WORKING'){showToast('ต้องกดเริ่มงานก่อนรับชำระ',false);return;}const total=(rider5Detail?.payable_installments||[]).filter(x=>ids.includes(String(x.collection_id))).reduce((s,x)=>s+Number(x.total_due||0),0);if(rider5Method==='CASH'){const ok=await fdgConfirm({title:'ยืนยันเตรียมรับเงินสด',kicker:'CASH COLLECTION',confirmText:'เปิดกล้องถ่ายหลักฐาน',body:`ลูกค้า <b>${liveEsc(rider5Detail?.customer?.full_name||'-')}</b><br>เลือก <b>${ids.length} งวด</b><br>ยอดรับ <b class="text-rose-600">${liveMoney(total)}</b><div class="mt-2 text-xs bg-amber-50 border border-amber-200 rounded-lg p-2">ต้องถ่ายรูปตอนรับเงิน + GPS ก่อนตัดยอด</div>`});if(ok)rider5OpenCamera('CASH',{collectionIds:ids});}else{const gps=await rider5GetLocation();if(!gps)return;try{const {data,error}=await adminSb.rpc('fdg_rider_create_scan_batch',{p_collection_ids:ids,p_gps_lat:gps.lat,p_gps_lng:gps.lng});if(error)throw error;rider5ScanBatch=data;document.getElementById('rider5-scan-amount').textContent=liveMoney(data.total_amount||0);document.getElementById('rider5-scan-qr').src=`https://promptpay.io/0658351446/${Number(data.total_amount||0).toFixed(2)}.png`;const m=document.getElementById('rider5-scan-modal');m.classList.remove('hidden');m.classList.add('flex');}catch(err){showToast(err?.message||'สร้าง SCAN ปลายทางไม่สำเร็จ',false);}}};
+window.rider5ProceedPayment=async function(){if(!rider5Loaded||rider5LoadError){showToast('กรุณารีเฟรชรายการงานก่อน',false);return;}const ids=rider5SelectedCollections();if(!ids.length){showToast('เลือกอย่างน้อย 1 งวด',false);return;}if(String(liveRiderDashboard?.state)!=='WORKING'){showToast('ต้องกดเริ่มงานก่อนรับชำระ',false);return;}const total=(rider5Detail?.payable_installments||[]).filter(x=>ids.includes(String(x.collection_id))).reduce((s,x)=>s+Number(x.total_due||0),0);if(rider5Method==='CASH'){const ok=await fdgConfirm({title:'ยืนยันเตรียมรับเงินสด',kicker:'CASH COLLECTION',confirmText:'เปิดกล้องถ่ายหลักฐาน',body:`ลูกค้า <b>${liveEsc(rider5Detail?.customer?.full_name||'-')}</b><br>เลือก <b>${ids.length} งวด</b><br>ยอดรับ <b class="text-rose-600">${liveMoney(total)}</b><div class="mt-2 text-xs bg-amber-50 border border-amber-200 rounded-lg p-2">ต้องถ่ายรูปตอนรับเงิน + GPS ก่อนตัดยอด</div>`});if(ok)rider5OpenCamera('CASH',{collectionIds:ids});}else{const gps=await rider5GetLocation();if(!gps)return;try{const {data,error}=await adminSb.rpc('fdg_rider_create_scan_batch',{p_collection_ids:ids,p_gps_lat:gps.lat,p_gps_lng:gps.lng});if(error)throw error;rider5ScanBatch=data;document.getElementById('rider5-scan-amount').textContent=liveMoney(data.total_amount||0);document.getElementById('rider5-scan-qr').src=`https://promptpay.io/0658351446/${Number(data.total_amount||0).toFixed(2)}.png`;const m=document.getElementById('rider5-scan-modal');m.classList.remove('hidden');m.classList.add('flex');}catch(err){showToast(err?.message||'สร้าง SCAN ปลายทางไม่สำเร็จ',false);}}};
 async function rider5FinalizeCashWithProof(blob,gps){const ids=rider5CameraContext?.collectionIds||rider5SelectedCollections();try{const path=await rider5UploadEvidence(blob,'cash');const ok=await fdgConfirm({title:'ยืนยันรับเงินสดและตัดยอด',kicker:'FINAL CASH',confirmText:'ยืนยันรับเงินจริง',danger:true,body:`รูปหลักฐานและ GPS อัปโหลดแล้ว<br><span class="text-xs text-gray-500">GPS ${gps.lat.toFixed(6)}, ${gps.lng.toFixed(6)}</span><div class="mt-2 text-xs bg-red-50 border border-red-200 rounded-lg p-2">หลังยืนยัน ยอดลูกค้าจะถูกตัดทันที และเงินจะเป็นเงินบริษัทที่ Rider ต้องนำส่ง</div>`});if(!ok)return;const {data,error}=await adminSb.rpc('fdg_rider_collect_cash_bundle',{p_collection_ids:ids,p_evidence_path:path,p_gps_lat:gps.lat,p_gps_lng:gps.lng});if(error)throw error;rider5CloseTaskModal();showToast(`รับเงินสดสำเร็จ ${liveMoney(data?.total_amount||0)} • คอมฯ ${liveMoney(data?.commission_amount||0)}`,true);await loadLiveRiderData({silent:true});}catch(err){showToast(err?.message||'รับเงินสดไม่สำเร็จ',false);}}
 window.rider5CloseScanModal=function(){const m=document.getElementById('rider5-scan-modal');m?.classList.add('hidden');m?.classList.remove('flex');};
 window.rider5CaptureScanSlip=function(){if(!rider5ScanBatch?.batch_id){showToast('ไม่พบรายการ SCAN',false);return;}rider5OpenCamera('SCAN_SLIP',{batchId:rider5ScanBatch.batch_id});};
-async function rider5VerifyDestinationScan(blob,gps){const batchId=rider5CameraContext?.batchId||rider5ScanBatch?.batch_id;try{const path=await rider5UploadEvidence(blob,'scan-slip');const {error:aerr}=await adminSb.rpc('fdg_rider_attach_scan_batch_evidence',{p_batch_id:batchId,p_evidence_path:path,p_gps_lat:gps.lat,p_gps_lng:gps.lng});if(aerr)throw aerr;const {data:s}=await adminSb.auth.getSession();const token=s?.session?.access_token;if(!token)throw new Error('Session หมดอายุ');showToast('กำลังตรวจ EasySlip...',true);const res=await fetch(`${ADMIN_SUPABASE_URL}/functions/v1/dynamic-api`,{method:'POST',headers:{'Content-Type':'application/json','apikey':ADMIN_SUPABASE_KEY,'Authorization':`Bearer ${token}`},body:JSON.stringify({type:'RIDER_CUSTOMER_SCAN',id:batchId})});let data={};try{data=await res.json();}catch(_){}if(!res.ok||data?.status!=='verified'){const e=new Error(data?.message||`EasySlip ไม่ผ่าน HTTP ${res.status}`);e.data=data;throw e;}rider5CloseScanModal();rider5CloseTaskModal();rider5ScanBatch=null;showToast(`✓ EasySlip VERIFIED ${liveMoney(data?.amount||0)} • เงินเข้าบริษัทโดยตรง`,true);await loadLiveRiderData({silent:true});}catch(err){showToast(err?.data?.message||err?.message||'ตรวจสลิปไม่สำเร็จ',false);await loadLiveRiderData({silent:true});}}
+async function rider5VerifyDestinationScan(blob,gps){const batchId=rider5CameraContext?.batchId||rider5ScanBatch?.batch_id;try{const path=await rider5UploadEvidence(blob,'scan-slip');const {data:attachment,error:aerr}=await adminSb.rpc('fdg_rider_attach_scan_batch_evidence',{p_batch_id:batchId,p_evidence_path:path,p_gps_lat:gps.lat,p_gps_lng:gps.lng});if(aerr)throw aerr;if(attachment?.status==='expired'){rider5CloseScanModal();rider5ScanBatch=null;throw new Error('รายการ SCAN หมดอายุ กรุณาตรวจยอดโอนกับ Admin ก่อนรับเงินหรือสร้างรายการใหม่');}const {data:s}=await adminSb.auth.getSession();const token=s?.session?.access_token;if(!token)throw new Error('Session หมดอายุ');showToast('กำลังตรวจ EasySlip...',true);const res=await fetch(`${ADMIN_SUPABASE_URL}/functions/v1/dynamic-api`,{method:'POST',headers:{'Content-Type':'application/json','apikey':ADMIN_SUPABASE_KEY,'Authorization':`Bearer ${token}`},body:JSON.stringify({type:'RIDER_CUSTOMER_SCAN',id:batchId})});let data={};try{data=await res.json();}catch(_){}if(!res.ok||data?.status!=='verified'){const e=new Error(data?.message||`EasySlip ไม่ผ่าน HTTP ${res.status}`);e.data=data;throw e;}rider5CloseScanModal();rider5CloseTaskModal();rider5ScanBatch=null;showToast(`✓ EasySlip VERIFIED ${liveMoney(data?.amount||0)} • เงินเข้าบริษัทโดยตรง`,true);await loadLiveRiderData({silent:true});}catch(err){showToast(err?.data?.message||err?.message||'ตรวจสลิปไม่สำเร็จ',false);await loadLiveRiderData({silent:true});}}
 
 window.rider5OpenIssueForCustomer=function(id){rider5OpenTask(id).then(()=>setTimeout(rider5OpenIssueModal,120));};
 window.rider5OpenIssueModal=function(){if(!rider5CurrentGroup)return;rider5IssueProof=null;document.getElementById('rider5-issue-note').value='';document.getElementById('rider5-issue-proof-state').textContent='ยังไม่มีรูปหน้าบ้านและ GPS';const a=Number(rider5CurrentGroup.call_attempts_today||0),f=rider5CurrentGroup.first_call_at?new Date(rider5CurrentGroup.first_call_at):null,l=rider5CurrentGroup.last_call_at?new Date(rider5CurrentGroup.last_call_at):null,g=(f&&l)?Math.floor((l-f)/60000):0;document.getElementById('rider5-call-rule').innerHTML=`<b>กดโทรวันนี้:</b> ${a} ครั้ง${a>=2?` • ห่างกัน ${g} นาที`:''}<br>“ไม่รับสาย” ต้อง 2 ครั้ง ห่าง ≥10 นาที • เหตุผลอื่นอย่างน้อย 1 ครั้ง`;const m=document.getElementById('rider5-issue-modal');m.classList.remove('hidden');m.classList.add('flex');};
@@ -189,3 +219,12 @@ updateMasterInvestmentLimit=async function(){const input=document.getElementById
 
 const rider5BaseAdminLoad=loadLiveAdminData;
 loadLiveAdminData=async function(){await rider5BaseAdminLoad();await rider5LoadAdminIssues(false);};
+
+window.rider5ResumeScan=function(id){
+  const b=rider5ScanBatches.find(x=>String(x.id)===String(id));if(!b)return;
+  rider5ScanBatch={...b,batch_id:b.id};
+  document.getElementById('rider5-scan-amount').textContent=liveMoney(b.total_amount);
+  const promptpay='0658351446'; // Same company receiver as the existing SCAN flow.
+  document.getElementById('rider5-scan-qr').src=`https://promptpay.io/${promptpay}/${Number(b.total_amount).toFixed(2)}.png`;
+  const m=document.getElementById('rider5-scan-modal');m.classList.remove('hidden');m.classList.add('flex');
+};

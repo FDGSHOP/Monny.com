@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Rider SCAN success allocates through batch finalizer",
+    "pass": true
+  },
+  {
+    "name": "foreign already-verified batch still requires ownership",
+    "pass": true
+  },
+  {
+    "name": "missing authentication is rejected",
+    "pass": true
+  },
+  {
+    "name": "provider duplicate does not finalize",
+    "pass": true
+  },
+  {
+    "name": "provider wrong amount does not finalize",
+    "pass": true
+  },
+  {
+    "name": "provider wrong account does not finalize",
+    "pass": true
+  },
+  {
+    "name": "provider missing reference does not finalize",
+    "pass": true
+  },
+  {
+    "name": "duplicate database reference returns duplicate",
+    "pass": true
+  },
+  {
+    "name": "Customer Payment retains its existing finalizer",
+    "pass": true
+  }
+]

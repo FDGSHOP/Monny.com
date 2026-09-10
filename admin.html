@@ -4058,6 +4058,7 @@ async function phase2d2FetchByIds(table,fields,ids){
 
 async function loadLiveRiderData(opts={}){
   if(!currentUser||currentUser.role!=="rider")return;
+  const actor=currentUser.id;
   try{
     const [stateRes,colRes,remRes,comRes,areaAccessRes]=await Promise.all([
       adminSb.rpc("fdg_rider_dashboard_state"),
@@ -4070,6 +4071,10 @@ async function loadLiveRiderData(opts={}){
     if(stateRes.error)throw stateRes.error;
     if(colRes.error)throw colRes.error;
 
+    if(remRes.error)throw remRes.error;
+    if(comRes.error)throw comRes.error;
+    if(areaAccessRes.error)throw areaAccessRes.error;
+    if(currentUser?.id!==actor)return false;
     liveRiderDashboard=stateRes.data||{};
     liveRiderCollections=colRes.data||[];
     liveRiderRemittances=remRes.error?[]:(remRes.data||[]);
@@ -4081,17 +4086,22 @@ async function loadLiveRiderData(opts={}){
     const instIds=liveRiderCollections.map(x=>x.installment_id);
     const areaIds=liveRiderAreaAccess.map(x=>x.area_id);
 
-    [liveRiderCustomers,liveRiderLoans,liveRiderInstallments,liveRiderAreaRows]=await Promise.all([
+    const related=await Promise.all([
       phase2d2FetchByIds("customers","id,customer_code,full_name,phone,home_address,home_district,home_subdistrict,work_address,shop_name,gps_lat,gps_lng,service_area_id",custIds),
       phase2d2FetchByIds("loans","id,loan_code,customer_id,remaining_balance,payment_channel,status",loanIds),
       phase2d2FetchByIds("loan_installments","id,loan_id,installment_no,due_date,amount_due,amount_paid,status",instIds),
       phase2d2FetchByIds("service_areas","id,display_name,district,subdistrict",areaIds)
     ]);
 
+    if(currentUser?.id!==actor)return false;
+    [liveRiderCustomers,liveRiderLoans,liveRiderInstallments,liveRiderAreaRows]=related;
     renderRider();
+    return true;
   }catch(err){
     console.error("Rider LIVE load failed",err);
+    if(currentUser?.id!==actor)return false;
     if(!opts.silent)showToast(err?.message||"โหลดข้อมูล Rider ไม่สำเร็จ",false);
+    return false;
   }
 }
 
@@ -4761,6 +4771,6 @@ liveSetBusy=function(on,msg="กำลังโหลดข้อมูล..."){
   }
 };
 </script>
-<script src="./rider5a.js?v=5a2-20260909"></script>
+<script src="./rider5a.js?v=5a2-20260910"></script>
 
 </body></html>

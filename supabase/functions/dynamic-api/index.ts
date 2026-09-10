@@ -717,6 +717,15 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (error || !batch) return json({ status: "error", message: "ไม่พบรายการ SCAN ของ Rider" }, 404);
+    const { caller } = await resolveStaffByAuth(admin, authUser);
+    if (!caller || caller.deleted_at || String(caller.status) !== "active" ||
+        !["rider", "admin", "master"].includes(String(caller.role))) {
+      return json({ status: "error", message: "บัญชีนี้ไม่มีสิทธิ์ตรวจสอบรายการ Rider" }, 403);
+    }
+    if (String(caller.role) === "rider" && String(batch.rider_id) !== String(caller.id)) {
+      return json({ status: "error", message: "รายการนี้ไม่ใช่ของ Rider บัญชีนี้" }, 403);
+    }
+
     if (batch.status === "verified") {
       return json({ status: "verified", message: "รายการนี้ตรวจสอบผ่านแล้ว", id: itemId });
     }
@@ -727,14 +736,6 @@ Deno.serve(async (req) => {
       return json({ status: "error", message: `สถานะรายการไม่สามารถตรวจสอบได้: ${batch.status}` }, 409);
     }
 
-    const { caller } = await resolveStaffByAuth(admin, authUser);
-    if (!caller || caller.deleted_at || String(caller.status) !== "active" ||
-        !["rider", "admin", "master"].includes(String(caller.role))) {
-      return json({ status: "error", message: "บัญชีนี้ไม่มีสิทธิ์ตรวจสอบรายการ Rider" }, 403);
-    }
-    if (String(caller.role) === "rider" && String(batch.rider_id) !== String(caller.id)) {
-      return json({ status: "error", message: "รายการนี้ไม่ใช่ของ Rider บัญชีนี้" }, 403);
-    }
 
     expected = Number(batch.total_amount || 0);
     evidencePath = clean(batch.evidence_path);

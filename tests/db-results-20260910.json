@@ -1,0 +1,485 @@
+[
+  {
+    "executed": true,
+    "observed": {
+      "balance": 0,
+      "commission": 7,
+      "company_money": 150,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 100,
+          "status": "paid"
+        }
+      ],
+      "payments": [
+        {
+          "after": 0,
+          "before": 100,
+          "interest": 20,
+          "late_fee": 50,
+          "principal": 80,
+          "received": 150
+        }
+      ]
+    },
+    "scenario": "cash_single_fee"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 0,
+      "commission": 14,
+      "company_money": 300,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 100,
+          "status": "paid"
+        },
+        {
+          "n": 2,
+          "paid": 100,
+          "status": "paid"
+        }
+      ],
+      "payments": [
+        {
+          "after": 100,
+          "before": 200,
+          "interest": 20,
+          "late_fee": 50,
+          "principal": 80,
+          "received": 150
+        },
+        {
+          "after": 0,
+          "before": 100,
+          "interest": 20,
+          "late_fee": 50,
+          "principal": 80,
+          "received": 150
+        }
+      ]
+    },
+    "scenario": "cash_multi_fee"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 0,
+      "commission": 7,
+      "company_money": 100,
+      "fee_per_installment": 0,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 100,
+          "status": "paid"
+        }
+      ],
+      "payments": [
+        {
+          "after": 0,
+          "before": 100,
+          "interest": 20,
+          "late_fee": 0,
+          "principal": 80,
+          "received": 100
+        }
+      ]
+    },
+    "scenario": "cash_no_fee"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 0,
+      "bank_refs": 1,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 100,
+          "status": "paid"
+        },
+        {
+          "n": 2,
+          "paid": 100,
+          "status": "paid"
+        }
+      ],
+      "payment_refs": 1,
+      "payments": [
+        {
+          "after": 100,
+          "before": 200,
+          "interest": 20,
+          "late_fee": 50,
+          "principal": 80,
+          "received": 150
+        },
+        {
+          "after": 0,
+          "before": 100,
+          "interest": 20,
+          "late_fee": 50,
+          "principal": 80,
+          "received": 150
+        }
+      ]
+    },
+    "scenario": "scan_multi_fee"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 200,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 0,
+          "status": "pending"
+        },
+        {
+          "n": 2,
+          "paid": 0,
+          "status": "pending"
+        }
+      ],
+      "payments": [],
+      "rejection": "OLDEST_INSTALLMENT_REQUIRED"
+    },
+    "scenario": "oldest_first"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 200,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 0,
+          "status": "pending"
+        },
+        {
+          "n": 2,
+          "paid": 100,
+          "status": "paid"
+        }
+      ],
+      "payments": [],
+      "rejection": "INSTALLMENT_ALREADY_PAID"
+    },
+    "scenario": "cash_atomic"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 200,
+      "bank_refs": 0,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 0,
+          "status": "pending"
+        },
+        {
+          "n": 2,
+          "paid": 0,
+          "status": "pending"
+        }
+      ],
+      "payments": [],
+      "rejection": "COLLECTION_ALREADY_PROCESSED"
+    },
+    "scenario": "scan_atomic"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 100,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 0,
+          "status": "pending"
+        }
+      ],
+      "issue_status": "rejected",
+      "payments": []
+    },
+    "scenario": "issue_review"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 0,
+      "commission": 7,
+      "company_money": 150,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 100,
+          "status": "paid"
+        }
+      ],
+      "payments": [
+        {
+          "after": 0,
+          "before": 100,
+          "interest": 20,
+          "late_fee": 50,
+          "principal": 80,
+          "received": 150
+        }
+      ],
+      "rejection": "CASH_REMITTANCE_REQUIRED"
+    },
+    "scenario": "end_work_money"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 100,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 0,
+          "status": "pending"
+        }
+      ],
+      "payments": [],
+      "rejection": "PENDING_COLLECTIONS_REMAIN: 1"
+    },
+    "scenario": "end_work_pending"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 100,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 0,
+          "status": "pending"
+        }
+      ],
+      "payments": [
+        {
+          "after": null,
+          "before": null,
+          "interest": 20,
+          "late_fee": 50,
+          "principal": 0,
+          "received": 70
+        }
+      ]
+    },
+    "scenario": "interest_only"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 100,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 0,
+          "status": "pending"
+        }
+      ],
+      "payments": [
+        {
+          "after": null,
+          "before": null,
+          "interest": 20,
+          "late_fee": 50,
+          "principal": 55,
+          "received": 70
+        }
+      ]
+    },
+    "scenario": "customer_regression"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 100,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 0,
+          "status": "pending"
+        }
+      ],
+      "payments": [],
+      "rejection": "DUPLICATE_BANK_TRANSACTION"
+    },
+    "scenario": "scan_duplicate"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 100,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 10,
+          "status": "pending"
+        }
+      ],
+      "payments": [],
+      "rejection": "BATCH_INSTALLMENT_CHANGED_REQUIRES_REVIEW"
+    },
+    "scenario": "scan_stale_quote"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 100,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 0,
+          "status": "pending"
+        }
+      ],
+      "payments": [],
+      "rejection": "PENDING_SCAN_BATCH_REMAINS"
+    },
+    "scenario": "end_work_scan"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 100,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 0,
+          "status": "pending"
+        }
+      ],
+      "payments": [],
+      "rejection": "ACTIVE_RIDER_WORK_SESSION_NOT_FOUND"
+    },
+    "scenario": "scan_without_work"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 100,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 0,
+          "status": "pending"
+        }
+      ],
+      "payments": [],
+      "rejection": "EVIDENCE_REQUIRED"
+    },
+    "scenario": "photo_required"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 100,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 0,
+          "status": "pending"
+        }
+      ],
+      "payments": [],
+      "rejection": "GPS_REQUIRED"
+    },
+    "scenario": "gps_required"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 100,
+      "commission": 0,
+      "company_money": 0,
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 0,
+          "status": "pending"
+        }
+      ],
+      "payments": [],
+      "rejection": "NO_ANSWER_REQUIRES_TWO_CALLS_10_MINUTES"
+    },
+    "scenario": "no_answer_spacing"
+  },
+  {
+    "executed": true,
+    "observed": {
+      "balance": 100,
+      "commission": 0,
+      "company_money": 0,
+      "daily_state": "CLOSED",
+      "fee_per_installment": 50,
+      "installments": [
+        {
+          "n": 1,
+          "paid": 0,
+          "status": "pending"
+        }
+      ],
+      "payments": [],
+      "repeat": "true",
+      "work_status": "completed"
+    },
+    "scenario": "end_work_closed"
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "name": "4G and Rider scripts initialize in document order",
+    "pass": true
+  },
+  {
+    "name": "failed first snapshot never claims zero pending work",
+    "pass": true
+  },
+  {
+    "name": "successful empty snapshot clears completed tasks immediately",
+    "pass": true
+  },
+  {
+    "name": "overlapping refreshes share one request",
+    "pass": true
+  },
+  {
+    "name": "financial fetch failure keeps prior remittance values",
+    "pass": true
+  },
+  {
+    "name": "logout clears Rider timer and rejects late response",
+    "pass": true
+  },
+  {
+    "name": "oldest-first selection fills preceding installments",
+    "pass": true
+  },
+  {
+    "name": "waiting SCAN can reopen the same batch without creating a payment",
+    "pass": true
+  },
+  {
+    "name": "expired attachment stops verification and refreshes tasks",
+    "pass": true
+  }
+]
